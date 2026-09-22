@@ -1,0 +1,35 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    container_name: vish_ai_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-vish}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vish_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-vish_ai}
+      POSTGRES_INITDB_ARGS: "--data-checksums"
+    # Keep Postgres modest: the local model owns most of the 16 GB.
+    command:
+      - postgres
+      - -c
+      - shared_buffers=256MB
+      - -c
+      - work_mem=32MB
+      - -c
+      - maintenance_work_mem=256MB
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U ${POSTGRES_USER:-vish} -d ${POSTGRES_DB:-vish_ai}
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+volumes:
+  pgdata:
+    name: vish_ai_pgdata

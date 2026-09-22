@@ -1,0 +1,48 @@
+# ---- Secrets ----
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# ---- Python / backend ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.python-version
+
+# ---- Node / frontend ----
+node_modules/
+.next/
+out/
+build/
+dist/
+*.tsbuildinfo
+.npm/
+.pnpm-store/
+
+# ---- Data / models (never commit; these are large) ----
+data/
+uploads/
+storage/
+*.gguf
+*.safetensors
+*.bin
+
+# ---- OS / editor ----
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/settings.json
+*.swp
+
+# ---- Logs ----
+*.log
+logs/
+npm-debug.log*
