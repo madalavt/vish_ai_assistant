@@ -17,7 +17,7 @@ of a second database, and why the workflow engine is custom instead of an
 embedded n8n. When proposing anything that adds a long-running process, account
 for its memory first.
 
-- `OLLAMA_MAX_LOADED_MODELS=1` — the 8B and 14B models must never both be resident.
+- `OLLAMA_MAX_LOADED_MODELS=2` — the chat model and `nomic-embed-text` must both stay resident (RAG needs both per query; ~6.9 GB together). Never load `qwen3:14b` alongside another model.
 - Docker Desktop should be capped near 3 GB; it only runs Postgres.
 
 ## Stack

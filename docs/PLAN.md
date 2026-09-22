@@ -31,7 +31,7 @@ Models run locally via Ollama to start, with a switch to Claude when quality mat
 
 **Why Ollama over MLX:** MLX is meaningfully faster on Apple Silicon, but Ollama serves chat and embedding models from a single OpenAI-compatible endpoint, which the RAG pipeline hits constantly. The provider abstraction (below) makes switching to LM Studio/MLX a config change later.
 
-**Memory budget:** set `OLLAMA_MAX_LOADED_MODELS=1` and `OLLAMA_KEEP_ALIVE=5m`. The 8B and 14B models must never be resident simultaneously — switching to deep mode evicts the 8B.
+**Memory budget:** set `OLLAMA_MAX_LOADED_MODELS=2` and `OLLAMA_KEEP_ALIVE=5m`. The chat model and `nomic-embed-text` must both stay resident, because every RAG query needs both (~6.9 GB together). A limit of 1 would evict and reload the chat model on every notebook question. `qwen3:14b` must never share with another model.
 
 **Python 3.14 is installed but the backend should pin 3.12.** Several ML/parsing dependencies (docling, torch-backed tokenizers) lag on 3.14. `uv python pin 3.12` in `backend/`.
 

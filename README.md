@@ -53,7 +53,7 @@ Open http://localhost:3000.
 
 The 16 GB budget is the real constraint, not disk. Two settings matter:
 
-- `OLLAMA_MAX_LOADED_MODELS=1` — never hold the 8B and 14B models at once.
+- `OLLAMA_MAX_LOADED_MODELS=2` — keep the chat and embedding models both loaded.
 - Keep Docker Desktop's memory allocation low (~3 GB). It only runs Postgres.
 
 ## Working conventions

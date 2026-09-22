@@ -26,8 +26,10 @@ irritation in daily use.
 
 ## Consequences
 
-- Set `OLLAMA_MAX_LOADED_MODELS=1`: the 8B and 14B models must never be resident
-  at the same time on a 16 GB machine.
+- Set `OLLAMA_MAX_LOADED_MODELS=2`: the chat model and the embedding model must
+  both stay resident, since every RAG query needs both. A limit of 1 would evict
+  and reload the 8B model on each query. The 14B must never share with another
+  model — that exceeds 16 GB.
 - Homebrew's service enables `OLLAMA_FLASH_ATTENTION=1` and
   `OLLAMA_KV_CACHE_TYPE=q8_0`, which roughly halves KV-cache memory. Keep both.
 - Leaving ~20–35% of available tokens/sec on the table versus MLX, by choice.
