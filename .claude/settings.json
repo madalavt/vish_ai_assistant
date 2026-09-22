@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(docker compose:*)",
+      "Bash(docker ps:*)",
+      "Bash(docker logs:*)",
+      "Bash(uv run:*)",
+      "Bash(uv sync:*)",
+      "Bash(uv add:*)",
+      "Bash(npm run:*)",
+      "Bash(npm install:*)",
+      "Bash(npx shadcn:*)",
+      "Bash(ollama list:*)",
+      "Bash(ollama ps:*)",
+      "Bash(ollama show:*)",
+      "Bash(curl -s http://localhost:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git checkout -b:*)",
+      "Bash(git branch:*)",
+      "Bash(git tag:*)"
+    ],
+    "ask": [
+      "Bash(git push:*)",
+      "Bash(git remote add:*)",
+      "Bash(gh repo create:*)",
+      "Bash(docker compose down -v:*)"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.local)",
+      "Bash(git config --global:*)"
+    ]
+  }
+}

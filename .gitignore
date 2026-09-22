@@ -46,3 +46,6 @@ Thumbs.db
 *.log
 logs/
 npm-debug.log*
+
+# Claude Code personal overrides (not shared)
+.claude/settings.local.json
