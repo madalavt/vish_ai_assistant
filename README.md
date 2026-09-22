@@ -14,7 +14,7 @@ architecture is what it is.
 
 | Layer | Choice |
 |---|---|
-| Frontend | Next.js 15 (App Router), TypeScript, Tailwind, shadcn/ui |
+| Frontend | Next.js 16 (App Router), TypeScript, Tailwind v4, shadcn/ui |
 | Backend | Python 3.12, FastAPI, SQLAlchemy (async) |
 | Database | Postgres 17 + pgvector |
 | Models | Ollama — `qwen3:8b` daily, `qwen3:14b` deep mode, `nomic-embed-text` for RAG |

@@ -24,7 +24,7 @@ for its memory first.
 
 | Layer | Choice |
 |---|---|
-| Frontend | Next.js 15 App Router, TypeScript, Tailwind, shadcn/ui |
+| Frontend | Next.js 16 App Router, TypeScript, Tailwind v4, shadcn/ui |
 | Backend | Python **3.12** (not 3.14), FastAPI, async SQLAlchemy, `uv` |
 | Database | Postgres 17 + pgvector, migrations via Alembic |
 | Models | Ollama: `qwen3:8b`, `qwen3:14b` (deep), `nomic-embed-text` (768-dim) |

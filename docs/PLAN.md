@@ -23,7 +23,7 @@ Models run locally via Ollama to start, with a switch to Claude when quality mat
 | Cloud escape hatch | Claude via API, selectable per conversation |
 | Embeddings | `nomic-embed-text` v1.5, 768-dim (~274 MB) |
 | Runtime | Ollama (one server for chat + embeddings, OpenAI-compatible) |
-| Frontend | Next.js 15 App Router, TypeScript, Tailwind, shadcn/ui |
+| Frontend | Next.js 16 App Router, TypeScript, Tailwind v4, shadcn/ui |
 | Backend | Python 3.12 + FastAPI, `uv` for dependency management |
 | Database | Postgres 17 + pgvector — one DB for relational data, JSONB documents *and* vectors |
 | Workflow canvas | React Flow + custom DAG executor |
@@ -153,7 +153,7 @@ The plan is a living document in the repo, not a one-time artifact.
 
 Each milestone is independently completable and leaves the app in a working state. Status markers in `docs/PLAN.md` start as `[ ]`.
 
-### [ ] M0 — Foundations
+### [x] M0 — Foundations
 *Target: half a day*
 
 - `git init`; monorepo layout above; `.gitignore` for `node_modules`, `.venv`, `__pycache__`, `.env`, `.next`
