@@ -168,7 +168,7 @@ Each milestone is independently completable and leaves the app in a working stat
 
 **Done when:** `docker compose up` + backend + frontend all run, and the Next.js page renders data fetched from `GET /api/health`.
 
-### [ ] M1 — Data layer and provider abstraction
+### [x] M1 — Data layer and provider abstraction
 *Target: 1–2 days*
 
 - Alembic init; migration creating all core tables and the `local` user
@@ -178,6 +178,13 @@ Each milestone is independently completable and leaves the app in a working stat
 - A `scripts/smoke_llm.py` that streams a completion from Ollama *and* Claude
 
 **Done when:** the smoke script streams tokens from both providers through the identical interface.
+
+> **Completed 2026-09-21 with one gap.** The Ollama path is verified (0.23s to
+> first token, 21.5 tok/s warm on qwen3:8b). The Anthropic path is implemented
+> and unit-tested but has never hit a live endpoint, because no
+> `ANTHROPIC_API_KEY` is set. Adding a key requires no code change — Claude
+> appears in `GET /api/providers` on the next refresh. Re-run
+> `uv run python scripts/smoke_llm.py` to close this out.
 
 ### [ ] M2 — Chat tab
 *Target: 2–3 days*
