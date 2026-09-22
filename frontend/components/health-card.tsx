@@ -40,7 +40,9 @@ export async function HealthCard() {
   return (
     <div className="space-y-4 rounded-lg border p-4">
       <div className="flex items-center gap-2">
-        <Badge variant={health.status === "ok" ? "default" : "secondary"}>{health.status}</Badge>
+        <Badge variant={health.status === "ok" ? "default" : "secondary"}>
+          {health.status}
+        </Badge>
         <span className="text-sm font-medium">System</span>
       </div>
 
@@ -65,8 +67,14 @@ export async function HealthCard() {
         </div>
         <div className="pt-2">
           <Row label="Chat model" value={config.default_chat_model} />
-          <Row label="Embeddings" value={`${config.embedding_model} (${config.embedding_dim}d)`} />
-          <Row label="Cloud" value={config.cloud_enabled ? (config.cloud_model ?? "on") : "off"} />
+          <Row
+            label="Embeddings"
+            value={`${config.embedding_model} (${config.embedding_dim}d)`}
+          />
+          <Row
+            label="Cloud"
+            value={config.cloud_enabled ? (config.cloud_model ?? "on") : "off"}
+          />
         </div>
       </div>
     </div>

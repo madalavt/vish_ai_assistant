@@ -186,7 +186,7 @@ Each milestone is independently completable and leaves the app in a working stat
 > appears in `GET /api/providers` on the next refresh. Re-run
 > `uv run python scripts/smoke_llm.py` to close this out.
 
-### [ ] M2 — Chat tab
+### [x] M2 — Chat tab
 *Target: 2–3 days*
 
 - `POST /api/chat` → SSE stream; persist user and assistant messages

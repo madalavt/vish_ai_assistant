@@ -6,7 +6,8 @@
  * directly; client components use them inside effects or actions.
  */
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+const BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
 export class ApiError extends Error {
   constructor(
@@ -18,7 +19,10 @@ export class ApiError extends Error {
   }
 }
 
-export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+export async function apiFetch<T>(
+  path: string,
+  init?: RequestInit,
+): Promise<T> {
   const response = await fetch(`${BASE_URL}${path}`, {
     ...init,
     headers: { "Content-Type": "application/json", ...init?.headers },
@@ -26,7 +30,10 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
   });
 
   if (!response.ok) {
-    throw new ApiError(`${init?.method ?? "GET"} ${path} failed`, response.status);
+    throw new ApiError(
+      `${init?.method ?? "GET"} ${path} failed`,
+      response.status,
+    );
   }
 
   return response.json() as Promise<T>;
@@ -45,8 +52,15 @@ export type HealthCheck = {
 export type Health = {
   status: "ok" | "degraded";
   checks: {
-    database: HealthCheck & { server_version?: string; pgvector?: string | null };
-    ollama: HealthCheck & { version?: string; models?: string[]; missing?: string[] };
+    database: HealthCheck & {
+      server_version?: string;
+      pgvector?: string | null;
+    };
+    ollama: HealthCheck & {
+      version?: string;
+      models?: string[];
+      missing?: string[];
+    };
   };
   config: {
     default_chat_model: string;

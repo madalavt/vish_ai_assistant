@@ -12,7 +12,8 @@ import { cn } from "@/lib/utils";
  */
 export function AppNav() {
   const pathname = usePathname();
-  const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
+  const isActive = (href: string) =>
+    pathname === href || pathname.startsWith(`${href}/`);
 
   return (
     <>

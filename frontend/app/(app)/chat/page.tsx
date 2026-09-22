@@ -1,15 +1,16 @@
-import { HealthCard } from "@/components/health-card";
-import { Placeholder } from "@/components/placeholder";
+import { Suspense } from "react";
+
+import { ChatView } from "./chat-view";
 
 export default function ChatPage() {
+  // useSearchParams needs a Suspense boundary during prerender.
   return (
-    <Placeholder
-      title="Chat"
-      hint="Streaming conversation with a local model, or Claude when you need it."
-      milestone="M2"
+    <Suspense
+      fallback={
+        <div className="p-6 text-sm text-muted-foreground">Loading chat…</div>
+      }
     >
-      {/* The live health check is M0's end-to-end proof: browser -> API -> Postgres + Ollama. */}
-      <HealthCard />
-    </Placeholder>
+      <ChatView />
+    </Suspense>
   );
 }

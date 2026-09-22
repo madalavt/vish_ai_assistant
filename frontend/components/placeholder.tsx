@@ -16,20 +16,26 @@ export function Placeholder({
   children?: ReactNode;
 }) {
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8 md:py-12">
-      <header className="mb-8">
-        <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-        <p className="text-muted-foreground mt-1 text-sm">{hint}</p>
-      </header>
+    <div className="h-full overflow-y-auto">
+      <div className="mx-auto max-w-3xl px-4 py-8 md:py-12">
+        <header className="mb-8">
+          <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+          <p className="text-muted-foreground mt-1 text-sm">{hint}</p>
+        </header>
 
-      <div className="bg-muted/40 mb-8 rounded-lg border border-dashed p-4">
-        <p className="text-sm">
-          Not built yet — arrives in <span className="font-medium">{milestone}</span>. See{" "}
-          <code className="bg-muted rounded px-1 py-0.5 text-xs">docs/PLAN.md</code>.
-        </p>
+        <div className="bg-muted/40 mb-8 rounded-lg border border-dashed p-4">
+          <p className="text-sm">
+            Not built yet — arrives in{" "}
+            <span className="font-medium">{milestone}</span>. See{" "}
+            <code className="bg-muted rounded px-1 py-0.5 text-xs">
+              docs/PLAN.md
+            </code>
+            .
+          </p>
+        </div>
+
+        {children}
       </div>
-
-      {children}
     </div>
   );
 }
