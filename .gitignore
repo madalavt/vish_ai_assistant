@@ -14,7 +14,6 @@ venv/
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
-.python-version
 
 # ---- Node / frontend ----
 node_modules/
