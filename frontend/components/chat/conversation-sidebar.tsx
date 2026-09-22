@@ -131,7 +131,7 @@ export function ConversationSidebar({
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem
-                            onSelect={() => {
+                            onClick={() => {
                               setRenamingId(conversation.id);
                               setRenameValue(conversation.title);
                             }}
@@ -140,7 +140,7 @@ export function ConversationSidebar({
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             variant="destructive"
-                            onSelect={() => onDelete(conversation.id)}
+                            onClick={() => onDelete(conversation.id)}
                           >
                             Delete
                           </DropdownMenuItem>

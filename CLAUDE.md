@@ -27,7 +27,7 @@ for its memory first.
 | Frontend | Next.js 16 App Router, TypeScript, Tailwind v4, shadcn/ui |
 | Backend | Python **3.12** (not 3.14), FastAPI, async SQLAlchemy, `uv` |
 | Database | Postgres 17 + pgvector, migrations via Alembic |
-| Models | Ollama: `qwen3:8b`, `qwen3:14b` (deep), `nomic-embed-text` (768-dim) |
+| Models | Ollama: `qwen3:8b` (default), `qwen3:1.7b`, `llama3.2:3b`, `gemma3:4b`, `nomic-embed-text` (768-dim) |
 | Cloud | Claude via Anthropic API — optional, off when `ANTHROPIC_API_KEY` is blank |
 
 ## Commands
@@ -65,6 +65,20 @@ backend.
 
 ## Gotchas
 
+- **shadcn here is built on Base UI, not Radix.** Three Radix habits fail
+  *silently*, with no error and no type complaint:
+  `onSelect` on a menu item does nothing (Base UI exposes `onClick`);
+  `asChild` does nothing (use `render={<Button />}`); and
+  `DropdownMenuLabel` outside a `DropdownMenuGroup` throws at runtime and
+  blanks the page. All three shipped in M2 and were only caught by opening
+  the menus in a real browser. **A build that type-checks proves nothing
+  about menus** — click them.
+- **Never hardcode model capabilities.** `OllamaProvider.available_models`
+  reads `capabilities`, `context_length` and `parameter_size` from
+  `/api/tags`. The composer's thinking toggle and the M5 workflow LLM node
+  both depend on those flags, and `gemma3:4b` genuinely cannot call tools —
+  so guessing from a model's name produces a feature that silently does
+  nothing. `scripts/bench_models.py` measures any newly pulled model.
 - **nomic-embed-text requires prefixes.** Stored chunks need `search_document: `,
   queries need `search_query: `. Mismatching them degrades retrieval silently —
   no error, just worse results. Handle this inside `rag/store.py` so callers

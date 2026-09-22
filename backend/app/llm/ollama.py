@@ -12,12 +12,34 @@ from app.llm.base import ChatMessage, Chunk, ModelInfo, ProviderError
 
 logger = logging.getLogger(__name__)
 
-# Friendly labels for the models we ship with; anything else falls back to its id.
-_LABELS = {
-    "qwen3:8b": "Qwen3 8B (fast)",
-    "qwen3:14b": "Qwen3 14B (deep)",
-    "nomic-embed-text": "Nomic Embed",
+# Display names for models we deliberately ship with. Anything else the user
+# pulls is labelled from Ollama's own metadata, so the picker stays correct
+# without this dict being kept up to date.
+_FAMILY_NAMES = {
+    "qwen3": "Qwen3",
+    "llama": "Llama",
+    "gemma3": "Gemma 3",
+    "phi3": "Phi",
+    "nomic-bert": "Nomic Embed",
+    "granite": "Granite",
+    "mistral": "Mistral",
+    "smollm2": "SmolLM2",
 }
+
+
+def _label_for(model_id: str, family: str | None, parameter_size: str | None) -> str:
+    """A readable name built from Ollama's metadata.
+
+    e.g. ("llama3.2:3b", "llama", "3.2B") -> "Llama 3B". Falls back to the raw
+    id, which is always meaningful, rather than inventing something.
+    """
+    pretty = _FAMILY_NAMES.get((family or "").lower())
+    if not pretty:
+        return model_id
+    if parameter_size:
+        return f"{pretty} {parameter_size}"
+    return pretty
+
 
 # nomic-embed-text was trained with task prefixes. Documents and queries must be
 # prefixed differently or retrieval quality degrades with no error to show for it.
@@ -143,8 +165,10 @@ class OllamaProvider:
         return embeddings
 
     async def available_models(self) -> list[ModelInfo]:
-        """What is actually pulled. Empty list if Ollama is down."""
-        settings = get_settings()
+        """What is actually pulled, described from Ollama's own metadata.
+
+        Empty list if Ollama is down — that is how a provider opts out.
+        """
         try:
             async with self._client(timeout=5.0) as client:
                 response = await client.get("/api/tags")
@@ -156,17 +180,36 @@ class OllamaProvider:
 
         models: list[ModelInfo] = []
         for entry in tags:
-            raw = entry.get("name", "")
             # Ollama reports "qwen3:8b" but "nomic-embed-text:latest".
-            short = raw.removesuffix(":latest")
-            is_embedding = short == settings.embedding_model
+            short = entry.get("name", "").removesuffix(":latest")
+            if not short:
+                continue
+
+            details = entry.get("details") or {}
+            capabilities = set(entry.get("capabilities") or [])
+            family = details.get("family")
+            parameter_size = details.get("parameter_size")
+
             models.append(
                 ModelInfo(
                     id=short,
-                    label=_LABELS.get(short, short),
+                    label=_label_for(short, family, parameter_size),
                     provider=self.name,
-                    kind="embedding" if is_embedding else "chat",
+                    # Read the capability rather than comparing against the
+                    # configured embedding model: pulling a second embedding
+                    # model would otherwise be misfiled as a chat model.
+                    kind="embedding" if "embedding" in capabilities else "chat",
+                    context_window=details.get("context_length"),
                     local=True,
+                    parameter_size=parameter_size,
+                    size_bytes=entry.get("size"),
+                    quantization=details.get("quantization_level"),
+                    family=family,
+                    supports_tools="tools" in capabilities,
+                    supports_thinking="thinking" in capabilities,
                 )
             )
+
+        # Smallest first, so the fast options are easy to find in the picker.
+        models.sort(key=lambda m: m.size_bytes or 0)
         return models

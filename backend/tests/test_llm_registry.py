@@ -119,3 +119,57 @@ async def test_resolve_honours_an_available_request(live_registry):
 async def test_embedding_provider_is_always_local(live_registry):
     """Embeddings must not silently go to a cloud provider."""
     assert live_registry.embedding_provider.name == "ollama"
+
+
+# ------------------------------------------------------------ model metadata
+
+
+def test_label_is_built_from_family_and_size():
+    """Labels come from Ollama's metadata so a newly pulled model reads well
+    without anyone updating a hardcoded dict."""
+    from app.llm.ollama import _label_for
+
+    assert _label_for("llama3.2:3b", "llama", "3.2B") == "Llama 3.2B"
+    assert _label_for("qwen3:1.7b", "qwen3", "2.0B") == "Qwen3 2.0B"
+
+
+def test_label_falls_back_to_the_model_id():
+    """An unknown family must not produce an invented name."""
+    from app.llm.ollama import _label_for
+
+    assert _label_for("some-new-model:7b", "unheard-of", "7B") == "some-new-model:7b"
+    assert _label_for("mystery:1b", None, None) == "mystery:1b"
+
+
+async def test_embedding_models_are_classified_by_capability(live_registry):
+    """Classifying by capability rather than by comparing against the configured
+    embedding model means a second embedding model is not misfiled as chat."""
+    models = await live_registry.list_models(refresh=True)
+    embedding = [m for m in models if m.kind == "embedding"]
+    assert embedding, "expected at least one embedding model"
+    assert all("embed" in m.id for m in embedding)
+    assert all(m.kind == "chat" for m in models if "embed" not in m.id)
+
+
+async def test_chat_models_report_a_real_context_window(live_registry):
+    """A null context window would leave the UI unable to warn about limits."""
+    chat = await live_registry.chat_models()
+    assert all(m.context_window and m.context_window > 1000 for m in chat)
+
+
+async def test_thinking_support_is_reported_per_model(live_registry):
+    """The composer's thinking toggle is gated on this; a wrong value either
+    hides a working feature or offers one that silently does nothing."""
+    by_id = {m.id: m for m in await live_registry.chat_models()}
+
+    if "qwen3:8b" in by_id:
+        assert by_id["qwen3:8b"].supports_thinking is True
+        assert by_id["qwen3:8b"].supports_tools is True
+    if "llama3.2:3b" in by_id:
+        assert by_id["llama3.2:3b"].supports_thinking is False
+
+
+async def test_models_are_sorted_smallest_first(live_registry):
+    """The picker relies on this ordering to group the fast models together."""
+    sizes = [m.size_bytes or 0 for m in await live_registry.list_models(refresh=True)]
+    assert sizes == sorted(sizes)

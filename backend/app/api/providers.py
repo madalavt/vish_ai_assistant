@@ -16,6 +16,12 @@ class ModelOut(BaseModel):
     kind: str
     context_window: int | None
     local: bool
+    parameter_size: str | None = None
+    size_bytes: int | None = None
+    quantization: str | None = None
+    family: str | None = None
+    supports_tools: bool = False
+    supports_thinking: bool = False
 
 
 class ProvidersOut(BaseModel):
@@ -49,6 +55,12 @@ async def list_providers(refresh: bool = False) -> ProvidersOut:
                 kind=m.kind,
                 context_window=m.context_window,
                 local=m.local,
+                parameter_size=m.parameter_size,
+                size_bytes=m.size_bytes,
+                quantization=m.quantization,
+                family=m.family,
+                supports_tools=m.supports_tools,
+                supports_thinking=m.supports_thinking,
             )
             for m in models
         ],

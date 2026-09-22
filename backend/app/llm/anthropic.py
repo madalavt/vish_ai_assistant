@@ -19,25 +19,37 @@ logger = logging.getLogger(__name__)
 # Prices are $/1M tokens (input/output) as of 2026-09.
 _MODELS = [
     ModelInfo(
-        id="claude-sonnet-5",
-        label="Claude Sonnet 5 (cloud)",
-        provider="anthropic",
-        context_window=1_000_000,
-        local=False,
-    ),
-    ModelInfo(
-        id="claude-opus-5",
-        label="Claude Opus 5 (cloud, premium)",
-        provider="anthropic",
-        context_window=1_000_000,
-        local=False,
-    ),
-    ModelInfo(
         id="claude-haiku-4-5",
-        label="Claude Haiku 4.5 (cloud, cheap)",
+        label="Claude Haiku 4.5",
         provider="anthropic",
         context_window=200_000,
         local=False,
+        parameter_size="cheap",
+        family="claude",
+        supports_tools=True,
+        supports_thinking=True,
+    ),
+    ModelInfo(
+        id="claude-sonnet-5",
+        label="Claude Sonnet 5",
+        provider="anthropic",
+        context_window=1_000_000,
+        local=False,
+        parameter_size="balanced",
+        family="claude",
+        supports_tools=True,
+        supports_thinking=True,
+    ),
+    ModelInfo(
+        id="claude-opus-5",
+        label="Claude Opus 5",
+        provider="anthropic",
+        context_window=1_000_000,
+        local=False,
+        parameter_size="premium",
+        family="claude",
+        supports_tools=True,
+        supports_thinking=True,
     ),
 ]
 

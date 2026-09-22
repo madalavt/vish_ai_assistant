@@ -38,6 +38,14 @@ export type ModelInfo = {
   kind: "chat" | "embedding";
   context_window: number | null;
   local: boolean;
+  parameter_size: string | null;
+  size_bytes: number | null;
+  quantization: string | null;
+  family: string | null;
+  /** Needed by the M5 workflow LLM node. */
+  supports_tools: boolean;
+  /** Gates the composer's thinking toggle. */
+  supports_thinking: boolean;
 };
 
 export type Providers = {

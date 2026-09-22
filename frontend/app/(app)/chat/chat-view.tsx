@@ -62,7 +62,10 @@ export function ChatView() {
   };
 
   const handleSend = async (text: string) => {
-    const id = await chat.send(text, { model: model ?? undefined, think });
+    const id = await chat.send(text, {
+      model: model ?? undefined,
+      think: think && thinkSupported,
+    });
     // A new conversation gets its id only once the stream starts.
     if (id && id !== conversationId) router.replace(`/chat?c=${id}`);
   };
@@ -74,6 +77,10 @@ export function ChatView() {
 
   const noModels =
     providers !== null && providers.models.every((m) => m.kind !== "chat");
+
+  const selectedModel = providers?.models.find((m) => m.id === model) ?? null;
+  // Default to allowing it until providers load, so the button does not flicker.
+  const thinkSupported = selectedModel?.supports_thinking ?? true;
 
   return (
     <div className="flex h-full">
@@ -205,8 +212,9 @@ export function ChatView() {
           onSend={handleSend}
           onStop={chat.stop}
           isStreaming={chat.isStreaming}
-          think={think}
+          think={think && thinkSupported}
           onThinkChange={setThink}
+          thinkSupported={thinkSupported}
           disabled={noModels}
         />
       </div>

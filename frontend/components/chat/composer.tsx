@@ -13,6 +13,7 @@ export function Composer({
   isStreaming,
   think,
   onThinkChange,
+  thinkSupported,
   disabled,
 }: {
   onSend: (text: string) => void;
@@ -20,6 +21,8 @@ export function Composer({
   isStreaming: boolean;
   think: boolean;
   onThinkChange: (value: boolean) => void;
+  /** False for models without a thinking mode, e.g. Llama and Gemma. */
+  thinkSupported: boolean;
   disabled?: boolean;
 }) {
   const [value, setValue] = useState("");
@@ -67,15 +70,20 @@ export function Composer({
               type="button"
               variant="ghost"
               size="sm"
+              disabled={!thinkSupported}
               onClick={() => onThinkChange(!think)}
               className={cn(
                 "h-8 gap-1.5 text-xs",
-                think && "text-foreground bg-accent",
+                think && thinkSupported && "text-foreground bg-accent",
               )}
-              title="Let the model reason before answering. Slower, better on hard questions."
+              title={
+                thinkSupported
+                  ? "Let the model reason before answering. Slower, better on hard questions."
+                  : "This model has no thinking mode."
+              }
             >
               <Brain className="size-3.5" />
-              Thinking {think ? "on" : "off"}
+              {thinkSupported ? `Thinking ${think ? "on" : "off"}` : "No thinking"}
             </Button>
 
             {isStreaming ? (

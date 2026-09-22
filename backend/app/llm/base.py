@@ -47,7 +47,12 @@ class Chunk:
 
 @dataclass(slots=True)
 class ModelInfo:
-    """A model the UI may offer."""
+    """A model the UI may offer.
+
+    Capability flags are reported rather than assumed: the thinking toggle and
+    the M5 workflow LLM node both need to know what a model can actually do,
+    and guessing from the model name goes stale the moment a new one is pulled.
+    """
 
     id: str
     label: str
@@ -56,6 +61,14 @@ class ModelInfo:
     context_window: int | None = None
     # False for cloud models, so the UI can mark what leaves the machine.
     local: bool = True
+
+    # Reported by the provider where available.
+    parameter_size: str | None = None
+    size_bytes: int | None = None
+    quantization: str | None = None
+    family: str | None = None
+    supports_tools: bool = False
+    supports_thinking: bool = False
 
 
 @runtime_checkable
