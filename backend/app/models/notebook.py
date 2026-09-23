@@ -85,7 +85,10 @@ class Chunk(UUIDMixin, TimestampMixin, Base):
 
     # Citation anchors.
     position: Mapped[int] = mapped_column(Integer, nullable=False)
+    # A chunk may span pages when pages are short. Storing only the start page
+    # would make a citation for text on the last page point at the first.
     page: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    end_page: Mapped[int | None] = mapped_column(Integer, nullable=True)
     section: Mapped[str | None] = mapped_column(Text, nullable=True)
     start_char: Mapped[int | None] = mapped_column(Integer, nullable=True)
     end_char: Mapped[int | None] = mapped_column(Integer, nullable=True)

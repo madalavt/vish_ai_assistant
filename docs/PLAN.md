@@ -199,17 +199,25 @@ Each milestone is independently completable and leaves the app in a working stat
 
 **Done when:** a real multi-turn conversation persists across reloads, streams smoothly, and mid-conversation model switching works.
 
-### [ ] M3 — Notebooks: ingestion
+### [x] M3 — Notebooks: ingestion
 *Target: 2–3 days*
 
 - Notebook CRUD; document upload (PDF, docx, txt, md) and URL fetch
-- Parse with `docling` (strong PDF layout/table handling), fall back to plain text
+- Parse with `pymupdf4llm` (see ADR 0005 — docling was dropped; it pulls torch and competes for RAM with the chat model), `python-docx` for Word, `trafilatura` for URLs
 - Chunk ~800 tokens with ~120 overlap, preserving `page`/`section`/offsets
 - Embed via `nomic-embed-text`, store in pgvector
 - **Gotcha to encode:** nomic-embed requires `search_document: ` prefix on stored chunks and `search_query: ` on queries. Mismatched prefixes silently degrade retrieval — put this in `rag/store.py`, not in calling code.
 - Background processing with a status column; UI shows per-document progress
 
 **Done when:** a 50-page PDF uploads, processes, and its chunks are queryable via a test endpoint with sensible similarity scores.
+
+> **Completed 2026-09-22.** A 52-page PDF ingests in ~5s (52 blocks, 47k chars,
+> 26 chunks). A fact planted on page 31 is retrieved as the top hit at 0.68
+> similarity, cited `p31–32`. PDF, docx, markdown and URL all verified; an
+> unsupported type returns 415. Chunks record a page *range*, because on
+> documents with sparse pages a chunk spans several and a single page number
+> would be a wrong citation. Dense pages (~3000 chars, typical of real
+> documents) map one chunk per page.
 
 ### [ ] M4 — Notebooks: retrieval and grounded chat
 *Target: 2–3 days*

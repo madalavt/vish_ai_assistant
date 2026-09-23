@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import chat, conversations, health, providers
+from app.api import chat, conversations, health, notebooks, providers
 from app.config import get_settings
 from app.db import engine
 
@@ -18,6 +18,16 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("starting up: chat model=%s", settings.default_chat_model)
+
+    # A document left at "processing" by a restart would sit there forever with
+    # no explanation, indistinguishable from one that is merely slow.
+    from app.rag.ingest import fail_interrupted_documents
+
+    try:
+        await fail_interrupted_documents()
+    except Exception:
+        logger.exception("could not clear interrupted documents")
+
     yield
     await engine.dispose()
     logger.info("shut down cleanly")
@@ -42,3 +52,5 @@ app.include_router(health.router)
 app.include_router(providers.router)
 app.include_router(conversations.router)
 app.include_router(chat.router)
+app.include_router(notebooks.router)
+app.include_router(notebooks.documents_router)

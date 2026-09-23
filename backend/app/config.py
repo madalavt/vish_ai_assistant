@@ -35,6 +35,14 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:3000"
     log_level: str = "INFO"
 
+    # ---- Storage for uploads and extracted text (gitignored) ----
+    data_dir: str = str(REPO_ROOT / "data")
+
+    # ---- Ingestion ----
+    chunk_target_tokens: int = 800
+    chunk_overlap_tokens: int = 120
+    max_upload_mb: int = 50
+
     # ---- Single-user mode; real auth arrives in M9 ----
     local_user_email: str = "local@localhost"
     local_user_name: str = "Vishnu"
@@ -42,6 +50,14 @@ class Settings(BaseSettings):
     @property
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+
+    @property
+    def upload_dir(self) -> Path:
+        return Path(self.data_dir) / "uploads"
+
+    @property
+    def extracted_dir(self) -> Path:
+        return Path(self.data_dir) / "extracted"
 
     @property
     def cloud_enabled(self) -> bool:

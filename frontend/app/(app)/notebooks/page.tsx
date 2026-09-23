@@ -1,11 +1,13 @@
-import { Placeholder } from "@/components/placeholder";
+import { Suspense } from "react";
+
+import { NotebooksView } from "./notebooks-view";
 
 export default function NotebooksPage() {
   return (
-    <Placeholder
-      title="Notebooks"
-      hint="Upload sources, then ask questions and get answers with citations."
-      milestone="M3 (ingestion) and M4 (retrieval)"
-    />
+    <Suspense
+      fallback={<div className="text-muted-foreground p-6 text-sm">Loading notebooks…</div>}
+    >
+      <NotebooksView />
+    </Suspense>
   );
 }

@@ -14,6 +14,9 @@ dependencies = [
     "pgvector>=0.3.6",
     "httpx>=0.28",
     "python-multipart>=0.0.20",
+    "pymupdf4llm>=1.28.2",
+    "python-docx>=1.2.0",
+    "trafilatura>=2.2.0",
 ]
 
 [project.optional-dependencies]
