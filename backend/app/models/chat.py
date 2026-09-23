@@ -13,6 +13,17 @@ from app.models.base import TimestampMixin, UUIDMixin
 
 ROLES = ("user", "assistant", "system")
 
+DEFAULT_TITLE = "New conversation"
+TITLE_MAX_CHARS = 60
+
+
+def title_from(content: str) -> str:
+    """First line, clipped. Good enough, and no extra model call."""
+    first_line = content.strip().splitlines()[0] if content.strip() else DEFAULT_TITLE
+    if len(first_line) <= TITLE_MAX_CHARS:
+        return first_line
+    return first_line[: TITLE_MAX_CHARS - 1].rstrip() + "…"
+
 
 class Conversation(UUIDMixin, TimestampMixin, Base):
     __tablename__ = "conversations"
@@ -20,7 +31,7 @@ class Conversation(UUIDMixin, TimestampMixin, Base):
     user_id: Mapped[uuid.UUID] = mapped_column(
         PgUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
-    title: Mapped[str] = mapped_column(String(200), nullable=False, default="New conversation")
+    title: Mapped[str] = mapped_column(String(200), nullable=False, default=DEFAULT_TITLE)
     # Remembered per conversation so switching models does not leak across threads.
     model: Mapped[str] = mapped_column(String(100), nullable=False)
 

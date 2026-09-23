@@ -1,7 +1,7 @@
 "use client";
 
 import { MoreHorizontal, Plus, X } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -35,10 +35,22 @@ export function ConversationSidebar({
 }) {
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
+  // Read by finalFocus: Base UI's focus return on close would blur the new input.
+  const editing = useRef(false);
 
-  const commitRename = () => {
-    if (renamingId && renameValue.trim())
-      onRename(renamingId, renameValue.trim());
+  const startRename = (conversation: Conversation) => {
+    editing.current = true;
+    setRenamingId(conversation.id);
+    setRenameValue(conversation.title);
+  };
+
+  const finishRename = (save: boolean) => {
+    if (!editing.current) return; // already ended; this is the blur as it unmounts
+    editing.current = false;
+    const title = renameValue.trim();
+    const current = conversations.find((c) => c.id === renamingId)?.title;
+    if (save && renamingId && title && title !== current)
+      onRename(renamingId, title);
     setRenamingId(null);
   };
 
@@ -94,10 +106,10 @@ export function ConversationSidebar({
                     <Input
                       value={renameValue}
                       onChange={(e) => setRenameValue(e.target.value)}
-                      onBlur={commitRename}
+                      onBlur={() => finishRename(true)}
                       onKeyDown={(e) => {
-                        if (e.key === "Enter") commitRename();
-                        if (e.key === "Escape") setRenamingId(null);
+                        if (e.key === "Enter") finishRename(true);
+                        if (e.key === "Escape") finishRename(false);
                       }}
                       className="h-8 text-sm"
                       autoFocus
@@ -129,12 +141,12 @@ export function ConversationSidebar({
                         >
                           <MoreHorizontal className="size-4" />
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
+                        <DropdownMenuContent
+                          align="end"
+                          finalFocus={() => !editing.current}
+                        >
                           <DropdownMenuItem
-                            onClick={() => {
-                              setRenamingId(conversation.id);
-                              setRenameValue(conversation.title);
-                            }}
+                            onClick={() => startRename(conversation)}
                           >
                             Rename
                           </DropdownMenuItem>

@@ -47,6 +47,37 @@ DOCUMENT_PREFIX = "search_document: "
 QUERY_PREFIX = "search_query: "
 
 
+class StrayThinkClose:
+    """Drops the "</think>" qwen3 sometimes streams first with thinking off (seen on 1.7b)."""
+
+    TAG = "</think>"
+
+    def __init__(self) -> None:
+        self._head: str | None = ""  # None once past the start
+        self._dropped = False
+
+    def feed(self, text: str) -> str:
+        if self._head is None:
+            return text
+        self._head += text
+        rest = self._head.lstrip()
+        if rest.startswith(self.TAG):
+            self._dropped = True
+            self._head = rest[len(self.TAG) :]
+            rest = self._head.lstrip()
+        if not rest or (not self._dropped and self.TAG.startswith(rest)):
+            return ""  # undecided: only whitespace, or maybe the tag in pieces
+        out = rest if self._dropped else self._head
+        self._head = None
+        return out
+
+    def flush(self) -> str:
+        """Whatever is still held back when the stream ends."""
+        out = "" if self._head is None else self._head
+        self._head = None
+        return out.lstrip() if self._dropped else out
+
+
 class OllamaProvider:
     name = "ollama"
 
@@ -70,13 +101,15 @@ class OllamaProvider:
         Ollama returns newline-delimited JSON. Failures become an "error" chunk
         rather than an exception, so a partial answer is never discarded.
         """
+        think = bool(opts.get("think", False))
+        stray = None if think else StrayThinkClose()
         payload: dict[str, Any] = {
             "model": model,
             "messages": [{"role": m.role, "content": m.content} for m in messages],
             "stream": True,
             # qwen3 is a hybrid reasoning model. Thinking is off by default
             # because it roughly doubles latency for everyday chat.
-            "think": bool(opts.get("think", False)),
+            "think": think,
             "options": {
                 k: v
                 for k, v in {
@@ -110,6 +143,8 @@ class OllamaProvider:
                             continue
 
                         if error := event.get("error"):
+                            if stray and (held := stray.flush()):
+                                yield Chunk(type="text", text=held)
                             yield Chunk(type="error", text=str(error))
                             return
 
@@ -117,9 +152,14 @@ class OllamaProvider:
                         if thinking := message.get("thinking"):
                             yield Chunk(type="thinking", text=thinking)
                         if content := message.get("content"):
-                            yield Chunk(type="text", text=content)
+                            if stray:
+                                content = stray.feed(content)
+                            if content:
+                                yield Chunk(type="text", text=content)
 
                         if event.get("done"):
+                            if stray and (held := stray.flush()):
+                                yield Chunk(type="text", text=held)
                             yield Chunk(
                                 type="done",
                                 stop_reason=event.get("done_reason") or "stop",

@@ -8,7 +8,7 @@ from sqlalchemy.orm import selectinload
 
 from app.deps import CurrentUserId, SessionDep
 from app.llm import get_registry
-from app.models.chat import Conversation, Message
+from app.models.chat import DEFAULT_TITLE, Conversation, Message, title_from
 from app.schemas.chat import (
     ConversationCreate,
     ConversationDetailOut,
@@ -70,7 +70,7 @@ async def create_conversation(
     model = await get_registry().resolve_chat_model(payload.model)
     conversation = Conversation(
         user_id=user_id,
-        title=payload.title or "New conversation",
+        title=payload.title or DEFAULT_TITLE,
         model=model,
     )
     session.add(conversation)
@@ -143,7 +143,15 @@ async def truncate_conversation(
     Regenerate truncates at the last assistant turn; edit-and-resend truncates
     at the edited user turn.
     """
-    await load_conversation(session, conversation_id, user_id)
+    conversation = await load_conversation(session, conversation_id, user_id)
+
+    if payload.position == 0:
+        first = await session.scalar(
+            select(Message).where(Message.conversation_id == conversation_id, Message.position == 0)
+        )
+        # An auto-title leaves with its first message; a title the user set stays.
+        if first is not None and conversation.title == title_from(first.content):
+            conversation.title = DEFAULT_TITLE
 
     await session.execute(
         delete(Message).where(

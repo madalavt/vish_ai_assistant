@@ -10,7 +10,7 @@ import pytest
 from app.llm import ChatMessage, ProviderError, get_registry
 from app.llm.anthropic import AnthropicProvider
 from app.llm.base import LLMProvider
-from app.llm.ollama import DOCUMENT_PREFIX, QUERY_PREFIX, OllamaProvider
+from app.llm.ollama import DOCUMENT_PREFIX, QUERY_PREFIX, OllamaProvider, StrayThinkClose
 
 # --------------------------------------------------------------------- protocol
 
@@ -82,6 +82,40 @@ def test_embedding_prefixes_differ():
     assert DOCUMENT_PREFIX != QUERY_PREFIX
     assert DOCUMENT_PREFIX.startswith("search_document")
     assert QUERY_PREFIX.startswith("search_query")
+
+
+# ------------------------------------------------------- stray </think> filter
+
+
+def _filtered(chunks: list[str]) -> str:
+    stray = StrayThinkClose()
+    return "".join(stray.feed(c) for c in chunks) + stray.flush()
+
+
+@pytest.mark.parametrize(
+    "chunks",
+    [
+        ["</think>", "\n\n", "This", " first"],  # as qwen3:1.7b streams it
+        ["</", "think", ">", "\n\n", "This first"],  # the tag split across chunks
+        ["\n</think>This first"],
+    ],
+)
+def test_a_leading_stray_think_close_is_dropped(chunks):
+    assert _filtered(chunks) == "This first"
+
+
+@pytest.mark.parametrize(
+    "chunks",
+    [
+        ["Hello", "!"],
+        ["<", "div> is an element"],  # starts like the tag, then is not
+        ["\n", "Indented start"],
+        ["Close it with ", "</think>", " like that"],  # mid-reply is content
+        ["</thi"],  # ends before it could be the tag
+    ],
+)
+def test_other_replies_pass_through_unchanged(chunks):
+    assert _filtered(chunks) == "".join(chunks)
 
 
 # -------------------------------------------------------------------- registry

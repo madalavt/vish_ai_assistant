@@ -157,6 +157,8 @@ export async function streamChat(
 
   const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
   let buffer = "";
+  // A stream that closes without `done` or `error` was cut off, e.g. by a backend restart.
+  let terminated = false;
 
   try {
     for (;;) {
@@ -199,6 +201,7 @@ export async function streamChat(
             handlers.onThinking?.((payload as { text: string }).text);
             break;
           case "done": {
+            terminated = true;
             const done_ = payload as {
               stop_reason: string | null;
               usage: Record<string, unknown>;
@@ -207,10 +210,14 @@ export async function streamChat(
             break;
           }
           case "error":
+            terminated = true;
             handlers.onError?.((payload as { message: string }).message);
             break;
         }
       }
+    }
+    if (!terminated) {
+      handlers.onError?.("The connection closed before the reply finished.");
     }
   } catch (error) {
     if ((error as Error)?.name !== "AbortError") {

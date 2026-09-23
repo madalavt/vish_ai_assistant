@@ -24,7 +24,11 @@ export function ChatView() {
   const conversationId = params.get("c");
 
   const [providers, setProviders] = useState<Providers | null>(null);
-  const [model, setModel] = useState<string | null>(null);
+  // The model last chosen in the picker, and in which conversation.
+  const [picked, setPicked] = useState<{
+    conversationId: string | null;
+    model: string;
+  } | null>(null);
   const [think, setThink] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -35,12 +39,20 @@ export function ChatView() {
 
   useEffect(() => {
     getProviders()
-      .then((data) => {
-        setProviders(data);
-        setModel((current) => current ?? data.default_chat_model);
-      })
+      .then(setProviders)
       .catch(() => setProviders(null));
   }, []);
+
+  // New chats use your last pick; a conversation keeps its own model unless you pick in it.
+  const pickedHere =
+    picked &&
+    (conversationId === null || picked.conversationId === conversationId)
+      ? picked.model
+      : null;
+  const stored =
+    chat.conversations.find((c) => c.id === conversationId)?.model ?? null;
+  const model =
+    pickedHere ?? stored ?? providers?.default_chat_model ?? null;
 
   // Follow the stream, but stop fighting the user if they scroll up to read.
   const onScroll = useCallback(() => {
@@ -64,7 +76,7 @@ export function ChatView() {
   const handleSend = async (text: string) => {
     const id = await chat.send(text, {
       model: model ?? undefined,
-      think: think && thinkSupported,
+      think: thinkOn,
     });
     // A new conversation gets its id only once the stream starts.
     if (id && id !== conversationId) router.replace(`/chat?c=${id}`);
@@ -81,6 +93,8 @@ export function ChatView() {
   const selectedModel = providers?.models.find((m) => m.id === model) ?? null;
   // Default to allowing it until providers load, so the button does not flicker.
   const thinkSupported = selectedModel?.supports_thinking ?? true;
+  // `think` survives switching to a model without thinking; every send path uses this.
+  const thinkOn = think && thinkSupported;
 
   return (
     <div className="flex h-full">
@@ -123,9 +137,11 @@ export function ChatView() {
               models={providers.models}
               value={model}
               onChange={async (id) => {
-                setModel(id);
-                if (conversationId)
+                setPicked({ conversationId, model: id });
+                if (conversationId) {
                   await patchConversation(conversationId, { model: id });
+                  await chat.refreshConversations();
+                }
               }}
               disabled={chat.isStreaming}
             />
@@ -157,7 +173,7 @@ export function ChatView() {
                 onEdit={(m, content) =>
                   chat.editAndResend(m, content, {
                     model: model ?? undefined,
-                    think,
+                    think: thinkOn,
                   })
                 }
               />
@@ -195,7 +211,10 @@ export function ChatView() {
                     size="sm"
                     className="gap-1.5 text-xs"
                     onClick={() =>
-                      chat.regenerate({ model: model ?? undefined, think })
+                      chat.regenerate({
+                        model: model ?? undefined,
+                        think: thinkOn,
+                      })
                     }
                   >
                     <RefreshCw className="size-3.5" />
@@ -212,7 +231,7 @@ export function ChatView() {
           onSend={handleSend}
           onStop={chat.stop}
           isStreaming={chat.isStreaming}
-          think={think && thinkSupported}
+          think={thinkOn}
           onThinkChange={setThink}
           thinkSupported={thinkSupported}
           disabled={noModels}

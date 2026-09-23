@@ -24,6 +24,7 @@ export function MessageBubble({
 
   const isUser = message.role === "user";
   const failure = message.metadata?.error as string | undefined;
+  const thinking = message.metadata?.thinking as string | undefined;
 
   if (editing) {
     return (
@@ -69,6 +70,8 @@ export function MessageBubble({
         isUser ? "items-end" : "items-start",
       )}
     >
+      {!isUser && thinking && <ThinkingPanel text={thinking} />}
+
       <div
         className={cn(
           "max-w-[85%] rounded-2xl px-4 py-2.5 text-sm",

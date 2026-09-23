@@ -12,9 +12,24 @@ import {
 } from "@/lib/chat";
 
 /** A message being streamed has no database row of its own yet. */
-type Draft = { id: string; content: string; thinking: string };
+type Draft = {
+  id: string;
+  content: string;
+  thinking: string;
+  /** Where the turn started, so it never renders in another conversation. */
+  conversationId: string | null;
+};
 
 export type UseChat = ReturnType<typeof useChat>;
+
+/** After Stop the server may not have saved the partial reply yet; keep what was shown. */
+function keepStreamed(messages: Message[], streamed: Draft): Message[] {
+  return messages.map((m) =>
+    m.id === streamed.id && m.content.length < streamed.content.length
+      ? { ...m, content: streamed.content }
+      : m,
+  );
+}
 
 /**
  * Chat state for one conversation.
@@ -34,6 +49,13 @@ export function useChat(conversationId: string | null) {
   const [loadedFor, setLoadedFor] = useState<string | null>(null);
 
   const abortRef = useRef<AbortController | null>(null);
+  // Checked after awaits in `run`: only the newest turn, still on screen, may update state.
+  const turnRef = useRef(0);
+  const viewingRef = useRef(conversationId);
+
+  useEffect(() => {
+    viewingRef.current = conversationId;
+  }, [conversationId]);
 
   const refreshConversations = useCallback(async () => {
     try {
@@ -102,6 +124,8 @@ export function useChat(conversationId: string | null) {
 
       const controller = new AbortController();
       abortRef.current = controller;
+      const turn = ++turnRef.current;
+      const startedIn = conversationId;
 
       // Show the user's message immediately; the real row arrives with `start`.
       const optimisticId = `pending-${Date.now()}`;
@@ -121,6 +145,13 @@ export function useChat(conversationId: string | null) {
       }
 
       let resolvedId = conversationId;
+      // The draft, mirrored outside React state so it can be read afterwards.
+      const streamed: Draft = {
+        id: "",
+        content: "",
+        thinking: "",
+        conversationId: startedIn,
+      };
 
       await streamChat(
         {
@@ -132,11 +163,8 @@ export function useChat(conversationId: string | null) {
         {
           onStart: (event) => {
             resolvedId = event.conversation_id;
-            setDraft({
-              id: event.assistant_message_id,
-              content: "",
-              thinking: "",
-            });
+            streamed.id = event.assistant_message_id;
+            setDraft({ ...streamed });
             if (event.user_message_id) {
               setMessages((prev) =>
                 prev.map((m) =>
@@ -147,37 +175,46 @@ export function useChat(conversationId: string | null) {
               );
             }
           },
-          onToken: (text) =>
-            setDraft((prev) =>
-              prev ? { ...prev, content: prev.content + text } : prev,
-            ),
-          onThinking: (text) =>
-            setDraft((prev) =>
-              prev ? { ...prev, thinking: prev.thinking + text } : prev,
-            ),
-          onDone: () => setDraft(null),
-          onError: (message) => {
-            setError(message);
-            setDraft(null);
+          onToken: (text) => {
+            streamed.content += text;
+            setDraft({ ...streamed });
           },
+          onThinking: (text) => {
+            streamed.thinking += text;
+            setDraft({ ...streamed });
+          },
+          onError: (message) => setError(message),
         },
         controller.signal,
       );
 
-      abortRef.current = null;
-      setIsStreaming(false);
-
       // Refetch rather than trusting local state: the server persisted the
-      // real rows, including a partial answer if the stream failed.
-      if (resolvedId) {
+      // real rows, including a partial answer if the stream failed or stopped.
+      let refreshed: Message[] | null = null;
+      if (resolvedId && viewingRef.current === startedIn) {
         try {
-          const detail = await getConversation(resolvedId);
-          setMessages(detail.messages);
+          refreshed = (await getConversation(resolvedId)).messages;
         } catch {
           // Keep what is on screen.
         }
       }
-      void refreshConversations();
+      await refreshConversations();
+
+      // A newer turn (Stop, then an immediate resend) owns the state now.
+      if (turnRef.current !== turn) return resolvedId;
+
+      abortRef.current = null;
+      // After a switch mid-stream, the other conversation's own load owns the screen.
+      if (refreshed && viewingRef.current === startedIn) {
+        setMessages(
+          controller.signal.aborted
+            ? keepStreamed(refreshed, streamed)
+            : refreshed,
+        );
+      }
+      // Cleared with the refetched rows so the finished reply never blinks out.
+      setDraft(null);
+      setIsStreaming(false);
       return resolvedId;
     },
     [conversationId, isStreaming, refreshConversations],
@@ -232,7 +269,8 @@ export function useChat(conversationId: string | null) {
   return {
     conversations,
     messages,
-    draft,
+    // Derived, so a turn left running in another conversation never paints here.
+    draft: draft?.conversationId === conversationId ? draft : null,
     isStreaming,
     loading: conversationId !== null && loadedFor !== conversationId,
     error,
