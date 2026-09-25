@@ -79,6 +79,15 @@ async def _begin_turn(
         )
         if conversation is None:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "Conversation not found")
+        if conversation.notebook_id is not None:
+            # Continuing a notebook thread here would append an ungrounded,
+            # uncited turn to it — the exact failure the notebook tab exists to
+            # prevent, reached through the wrong endpoint.
+            raise HTTPException(
+                status.HTTP_409_CONFLICT,
+                "This conversation belongs to a notebook. "
+                "Continue it from the notebook tab so answers stay grounded.",
+            )
         model = await _resolve_model(requested_model or conversation.model)
         existing = list(
             await session.scalars(

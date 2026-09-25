@@ -5,6 +5,7 @@
  */
 
 import { apiFetch } from "@/lib/api";
+import { postEventStream } from "@/lib/sse";
 
 const BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
@@ -129,101 +130,42 @@ export async function streamChat(
   handlers: StreamHandlers,
   signal?: AbortSignal,
 ): Promise<void> {
-  let response: Response;
-  try {
-    response = await fetch(`${BASE_URL}/api/chat/stream`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(request),
-      signal,
-    });
-  } catch (error) {
-    if ((error as Error)?.name === "AbortError") return;
-    handlers.onError?.("Cannot reach the backend. Is it running on port 8000?");
-    return;
-  }
-
-  if (!response.ok || !response.body) {
-    let detail = `Request failed (${response.status})`;
-    try {
-      const body = await response.json();
-      if (body?.detail) detail = String(body.detail);
-    } catch {
-      // Non-JSON error body; the status is enough.
-    }
-    handlers.onError?.(detail);
-    return;
-  }
-
-  const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
-  let buffer = "";
-  // A stream that closes without `done` or `error` was cut off, e.g. by a backend restart.
-  let terminated = false;
-
-  try {
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      buffer += value;
-
-      // Frames are separated by a blank line; the last piece may be partial.
-      const frames = buffer.split("\n\n");
-      buffer = frames.pop() ?? "";
-
-      for (const frame of frames) {
-        if (!frame.trim()) continue;
-
-        let name = "message";
-        const dataLines: string[] = [];
-        for (const line of frame.split("\n")) {
-          if (line.startsWith("event:")) name = line.slice(6).trim();
-          else if (line.startsWith("data:"))
-            dataLines.push(line.slice(5).trim());
+  const outcome = await postEventStream(
+    "/api/chat/stream",
+    request,
+    ({ event, data }) => {
+      switch (event) {
+        case "start":
+          handlers.onStart?.(data as StartEvent);
+          return false;
+        case "token":
+          handlers.onToken?.((data as { text: string }).text);
+          return false;
+        case "thinking":
+          handlers.onThinking?.((data as { text: string }).text);
+          return false;
+        case "done": {
+          const done = data as {
+            stop_reason: string | null;
+            usage: Record<string, unknown>;
+          };
+          handlers.onDone?.(done.stop_reason, done.usage ?? {});
+          return true;
         }
-        if (!dataLines.length) continue;
-
-        let payload: unknown;
-        try {
-          payload = JSON.parse(dataLines.join("\n"));
-        } catch {
-          continue;
-        }
-
-        switch (name) {
-          case "start":
-            handlers.onStart?.(payload as StartEvent);
-            break;
-          case "token":
-            handlers.onToken?.((payload as { text: string }).text);
-            break;
-          case "thinking":
-            handlers.onThinking?.((payload as { text: string }).text);
-            break;
-          case "done": {
-            terminated = true;
-            const done_ = payload as {
-              stop_reason: string | null;
-              usage: Record<string, unknown>;
-            };
-            handlers.onDone?.(done_.stop_reason, done_.usage ?? {});
-            break;
-          }
-          case "error":
-            terminated = true;
-            handlers.onError?.((payload as { message: string }).message);
-            break;
-        }
+        case "error":
+          handlers.onError?.((data as { message: string }).message);
+          return true;
+        default:
+          return false;
       }
-    }
-    if (!terminated) {
-      handlers.onError?.("The connection closed before the reply finished.");
-    }
-  } catch (error) {
-    if ((error as Error)?.name !== "AbortError") {
-      handlers.onError?.(`Stream interrupted: ${(error as Error).message}`);
-    }
-  } finally {
-    reader.releaseLock();
+    },
+    signal,
+  );
+
+  if (outcome.kind === "failed") handlers.onError?.(outcome.message);
+  // A stream that closes without `done` or `error` was cut off, e.g. by a
+  // backend restart. Silence would leave the UI spinning forever.
+  else if (outcome.kind === "truncated") {
+    handlers.onError?.("The connection closed before the reply finished.");
   }
 }

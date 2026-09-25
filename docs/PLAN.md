@@ -219,16 +219,37 @@ Each milestone is independently completable and leaves the app in a working stat
 > would be a wrong citation. Dense pages (~3000 chars, typical of real
 > documents) map one chunk per page.
 
-### [ ] M4 — Notebooks: retrieval and grounded chat
+### [x] M4 — Notebooks: retrieval and grounded chat
 *Target: 2–3 days*
 
 - Hybrid retrieval: pgvector cosine + Postgres full-text, fused with Reciprocal Rank Fusion
 - Grounded answering prompt with numbered source context
 - Inline `[1]`, `[2]` citations that scroll to and highlight the source span
 - Notebook-scoped chat with a source panel; per-source include/exclude toggles
-- NotebookLM-style extras: auto-summary on upload, suggested starter questions, generated briefing doc
+- ~~NotebookLM-style extras: auto-summary on upload, suggested starter questions,
+  generated briefing doc~~ — **dropped 2026-09-24** by the user's decision. They
+  sit outside M4's criterion and each costs a model call per document.
 
 **Done when:** asking a question about uploaded sources returns an answer whose citations, when clicked, land on the correct passage.
+
+> **Completed 2026-09-24.** Verified by the `m4-tester` agent over three runs.
+> A fact planted on page 25 of a 40-page PDF is retrieved as source [1] and
+> cited correctly; clicking the marker opens the passage. Both halves of the
+> hybrid demonstrably contribute — for an exact identifier the needle ranks 1st
+> by vector *and* keyword, scoring 2.03× a vector-only hit, matching the RRF
+> arithmetic. Questions the sources cannot answer are refused rather than
+> invented.
+>
+> Four bugs were found by the agent and fixed, none of which the test suite or
+> a passing build would have caught:
+> 1. Zero-source streams never emitted `done`, so the client reported a dropped
+>    connection instead of the no-sources message.
+> 2. Notebook threads appeared in the chat tab, where continuing one answered
+>    ungrounded and uncited — the exact failure this tab exists to prevent.
+> 3. "Ready" was conflated with "included", so unticking every source claimed
+>    none were ready.
+> 4. After changing which sources were ticked, the model copied a fact *and its
+>    `[1]`* from the previous turn onto a source that contradicted it.
 
 ### [ ] M5 — Agents: execution core (backend only)
 *Target: 3–4 days*

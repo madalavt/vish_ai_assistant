@@ -55,10 +55,37 @@ Auth is deferred to M9, but the column is not — it exists so that adding login
 later is a session check, not a data migration. Never add a user-owned table
 without it.
 
-**Streaming is plain SSE** with our own event shape (`token`, `tool`, `citation`,
-`done`, `error`), consumed by `frontend/lib/useStream.ts`. We deliberately do not
-use the Vercel AI SDK's `useChat`; its protocol is a moving target for a Python
-backend.
+**Streaming is plain SSE** with our own event names — `start`, `token`,
+`thinking`, `done`, `error`, plus `sources` for notebook chat. Frame parsing
+lives once in `frontend/lib/sse.ts` (`postEventStream`); both the chat tab and
+notebook chat use it. We deliberately do not use the Vercel AI SDK's `useChat`;
+its protocol is a moving target for a Python backend.
+
+**Retrieval is hybrid, and both halves must contribute.** `rag/retrieve.py`
+fuses pgvector cosine and Postgres full-text by *rank* (RRF), in one SQL
+statement. Two traps: `plainto_tsquery` and `websearch_to_tsquery` both AND
+every term, so a natural-language question matches nothing and the keyword half
+silently contributes zero — `to_or_tsquery()` builds OR semantics from
+sanitized terms instead. And a parameter used both bare in `IS NULL` and cast
+elsewhere makes asyncpg fail with "could not determine data type"; cast it in
+both positions. When debugging retrieval, check `vector_rank`/`keyword_rank` on
+the returned sources: all-null keyword ranks means the keyword half is dead.
+
+**Answers cite sources by position.** Source `[1]` is `hits[0]`; the frontend
+maps markers back that way. Sources are stored on the assistant message, not
+re-retrieved on read — re-retrieving could return different passages and make
+old citation numbers point somewhere else. Markers outside the valid range are
+dropped rather than rendered as dead links.
+
+**Conversation history is only valid while the sources are.** A notebook
+answer is grounded in the passages retrieved *for that turn*. Replay an earlier
+turn after the user unticks a source and the model will copy its facts forward
+onto a source list that no longer supports them — and it copied the `[1]`
+along with them. Two defences, because a prompt instruction alone did not hold
+on an 8B model: assistant turns have their citation markers stripped before
+replay (`strip_citations`), and if the `document_ids` filter differs from the
+previous turn's, the history is withheld entirely. Each assistant message
+records the filter it ran under, which is what makes that comparison possible.
 
 **JSONB for schemaless data**, not a second database: `workflow_versions.graph`,
 `workflow_run_steps.input`/`.output`, `messages.metadata`, `documents.source_meta`.

@@ -71,3 +71,47 @@ class SearchHit(BaseModel):
 class SearchResponse(BaseModel):
     query: str
     hits: list[SearchHit]
+
+
+# ---------------------------------------------------------------------------
+# Grounded chat (M4). `frontend/lib/notebooks.ts` mirrors these.
+# ---------------------------------------------------------------------------
+
+
+class NotebookChatRequest(BaseModel):
+    conversation_id: uuid.UUID | None = None
+    content: str = Field(min_length=1)
+    model: str | None = None
+    # None means every source. A list restricts retrieval to those documents,
+    # which is how the per-source include/exclude toggles work.
+    document_ids: list[uuid.UUID] | None = None
+
+
+class SourceOut(BaseModel):
+    """One cited passage, numbered as the model was shown it."""
+
+    number: int
+    chunk_id: uuid.UUID
+    document_id: uuid.UUID
+    document_title: str
+    content: str
+    page: int | None
+    end_page: int | None
+    section: str | None
+    start_char: int | None
+    end_char: int | None
+    score: float
+    vector_rank: int | None
+    keyword_rank: int | None
+
+
+class SourcesEvent(BaseModel):
+    sources: list[SourceOut]
+
+
+class NotebookChatStart(BaseModel):
+    conversation_id: uuid.UUID
+    user_message_id: uuid.UUID
+    assistant_message_id: uuid.UUID
+    model: str
+    title: str

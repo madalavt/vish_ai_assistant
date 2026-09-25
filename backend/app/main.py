@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import chat, conversations, health, notebooks, providers
+from app.api import chat, conversations, health, notebook_chat, notebooks, providers
 from app.config import get_settings
 from app.db import engine
 
@@ -54,3 +54,4 @@ app.include_router(conversations.router)
 app.include_router(chat.router)
 app.include_router(notebooks.router)
 app.include_router(notebooks.documents_router)
+app.include_router(notebook_chat.router)

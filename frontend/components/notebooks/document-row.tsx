@@ -20,10 +20,15 @@ import { cn } from "@/lib/utils";
 
 export function DocumentRow({
   document,
+  included,
+  onToggle,
   onReprocess,
   onDelete,
 }: {
   document: SourceDocument;
+  /** Unchecked sources are excluded from retrieval. */
+  included: boolean;
+  onToggle: (id: string, include: boolean) => void;
   onReprocess: (id: string) => void;
   onDelete: (id: string) => void;
 }) {
@@ -32,7 +37,20 @@ export function DocumentRow({
   const pages = document.source_meta?.page_count as number | undefined;
 
   return (
-    <li className="flex items-start gap-3 rounded-lg border p-3">
+    <li
+      className={cn(
+        "flex items-start gap-3 rounded-lg border p-3 transition-opacity",
+        !included && "opacity-55",
+      )}
+    >
+      <input
+        type="checkbox"
+        checked={included}
+        disabled={document.status !== "ready"}
+        onChange={(e) => onToggle(document.id, e.target.checked)}
+        aria-label={`Include ${document.title} when answering`}
+        className="mt-1 size-3.5 shrink-0 accent-current disabled:opacity-40"
+      />
       <span className="mt-0.5 shrink-0">
         {processing ? (
           <Loader2 className="text-muted-foreground size-4 animate-spin" />

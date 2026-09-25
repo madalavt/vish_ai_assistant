@@ -56,7 +56,10 @@ async def list_conversations(
 ) -> list[Conversation]:
     result = await session.scalars(
         select(Conversation)
-        .where(Conversation.user_id == user_id)
+        # Notebook threads live in the notebook tab and are listed by
+        # /api/notebooks/{id}/conversations. Without this filter they appear in
+        # the chat sidebar, where continuing one runs ungrounded.
+        .where(Conversation.user_id == user_id, Conversation.notebook_id.is_(None))
         .order_by(Conversation.updated_at.desc())
         .limit(limit)
     )

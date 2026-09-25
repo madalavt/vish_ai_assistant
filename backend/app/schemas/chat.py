@@ -20,6 +20,8 @@ class MessageOut(BaseModel):
 class ConversationOut(BaseModel):
     id: uuid.UUID
     title: str
+    # Set for notebook grounded-chat threads, null for chat-tab conversations.
+    notebook_id: uuid.UUID | None = None
     model: str
     created_at: datetime
     updated_at: datetime

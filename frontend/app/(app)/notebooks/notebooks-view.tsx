@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { AddSources } from "@/components/notebooks/add-sources";
 import { DocumentRow } from "@/components/notebooks/document-row";
+import { NotebookChat } from "@/components/notebooks/notebook-chat";
 import { SearchPanel } from "@/components/notebooks/search-panel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,6 +41,8 @@ export function NotebooksView() {
   const [error, setError] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [newTitle, setNewTitle] = useState("");
+  // Document ids the user has switched off. Empty means every source is used.
+  const [excluded, setExcluded] = useState<Set<string>>(new Set());
 
   const refreshNotebooks = useCallback(async () => {
     try {
@@ -62,7 +65,9 @@ export function NotebooksView() {
     // during the effect's synchronous phase.
     listNotebooks()
       .then(setNotebooks)
-      .catch(() => setError("Cannot reach the backend. Is it running on port 8000?"));
+      .catch(() =>
+        setError("Cannot reach the backend. Is it running on port 8000?"),
+      );
     getSupportedExtensions()
       .then((r) => setExtensions(r.extensions))
       .catch(() => setExtensions([]));
@@ -70,7 +75,9 @@ export function NotebooksView() {
 
   useEffect(() => {
     let cancelled = false;
-    const load = notebookId ? listDocuments(notebookId) : Promise.resolve<SourceDocument[]>([]);
+    const load = notebookId
+      ? listDocuments(notebookId)
+      : Promise.resolve<SourceDocument[]>([]);
     load
       .then((docs) => {
         if (!cancelled) setDocuments(docs);
@@ -85,7 +92,10 @@ export function NotebooksView() {
 
   // Poll only while something is actually processing, so an idle notebook
   // makes no requests at all.
-  const anyProcessing = useMemo(() => documents.some(isProcessing), [documents]);
+  const anyProcessing = useMemo(
+    () => documents.some(isProcessing),
+    [documents],
+  );
 
   useEffect(() => {
     if (!notebookId || !anyProcessing) return;
@@ -136,7 +146,9 @@ export function NotebooksView() {
       await addUrlDocument(notebookId, url);
       await refreshDocuments(notebookId);
     } catch {
-      setError("Could not add that URL. Check it starts with http:// or https://");
+      setError(
+        "Could not add that URL. Check it starts with http:// or https://",
+      );
     } finally {
       setBusy(false);
     }
@@ -144,6 +156,17 @@ export function NotebooksView() {
 
   const active = notebooks.find((n) => n.id === notebookId) ?? null;
   const readyCount = documents.filter((d) => d.status === "ready").length;
+
+  // Only ready documents have chunks to retrieve, and only ticked ones should
+  // be searched. Counting selection alone would let a still-processing document
+  // look askable, and would report ready sources as "not ready" once unticked.
+  const includedReady = documents.filter(
+    (d) => d.status === "ready" && !excluded.has(d.id),
+  );
+
+  // null means "every source", which lets the backend skip the filter entirely.
+  const includedIds =
+    excluded.size === 0 ? null : includedReady.map((d) => d.id);
 
   return (
     <div className="flex h-full">
@@ -170,7 +193,12 @@ export function NotebooksView() {
             placeholder="New notebook…"
             className="h-8 text-sm"
           />
-          <Button size="icon" className="size-8 shrink-0" onClick={handleCreate} aria-label="Create notebook">
+          <Button
+            size="icon"
+            className="size-8 shrink-0"
+            onClick={handleCreate}
+            aria-label="Create notebook"
+          >
             <Plus className="size-4" />
           </Button>
           <Button
@@ -186,7 +214,9 @@ export function NotebooksView() {
 
         <nav className="flex-1 overflow-y-auto px-2 pb-3">
           {notebooks.length === 0 ? (
-            <p className="text-muted-foreground px-2 py-4 text-xs">No notebooks yet.</p>
+            <p className="text-muted-foreground px-2 py-4 text-xs">
+              No notebooks yet.
+            </p>
           ) : (
             <ul className="space-y-0.5">
               {notebooks.map((notebook) => (
@@ -200,7 +230,9 @@ export function NotebooksView() {
                         : "text-muted-foreground hover:bg-sidebar-accent/50 hover:text-foreground",
                     )}
                   >
-                    <span className="block truncate text-sm">{notebook.title}</span>
+                    <span className="block truncate text-sm">
+                      {notebook.title}
+                    </span>
                     <span className="text-muted-foreground block text-xs">
                       {notebook.document_count === 0
                         ? "No sources"
@@ -257,8 +289,9 @@ export function NotebooksView() {
               <div className="py-16 text-center">
                 <h2 className="text-lg font-medium">Notebooks</h2>
                 <p className="text-muted-foreground mx-auto mt-1 max-w-md text-sm">
-                  Upload PDFs, Word documents, notes or a web page, then search across them by
-                  meaning. Create a notebook on the left to start.
+                  Upload PDFs, Word documents, notes or a web page, then search
+                  across them by meaning. Create a notebook on the left to
+                  start.
                 </p>
               </div>
             ) : (
@@ -281,13 +314,24 @@ export function NotebooksView() {
                     </span>
                   </h2>
                   {documents.length === 0 ? (
-                    <p className="text-muted-foreground text-sm">Nothing added yet.</p>
+                    <p className="text-muted-foreground text-sm">
+                      Nothing added yet.
+                    </p>
                   ) : (
                     <ul className="space-y-2">
                       {documents.map((document) => (
                         <DocumentRow
                           key={document.id}
                           document={document}
+                          included={!excluded.has(document.id)}
+                          onToggle={(id, include) =>
+                            setExcluded((prev) => {
+                              const next = new Set(prev);
+                              if (include) next.delete(id);
+                              else next.add(id);
+                              return next;
+                            })
+                          }
                           onReprocess={async (id) => {
                             await reprocessDocument(id);
                             await refreshDocuments(notebookId);
@@ -304,13 +348,34 @@ export function NotebooksView() {
                 </section>
 
                 <section>
-                  <h2 className="mb-2 text-sm font-medium">Search</h2>
-                  <SearchPanel notebookId={notebookId} disabled={readyCount === 0} />
-                  <p className="text-muted-foreground mt-2 text-xs">
-                    Asking questions and getting cited answers arrives in M4. This searches the
-                    indexed passages directly.
-                  </p>
+                  <h2 className="mb-2 text-sm font-medium">Ask</h2>
+                  <NotebookChat
+                    // Remounts on notebook change, so a previous notebook's
+                    // answers and citations never linger.
+                    key={notebookId}
+                    notebookId={notebookId}
+                    model={null}
+                    documentIds={includedIds}
+                    availableCount={includedReady.length}
+                    readyCount={readyCount}
+                  />
                 </section>
+
+                <details className="group">
+                  <summary className="cursor-pointer text-sm font-medium">
+                    Search the indexed passages
+                  </summary>
+                  <div className="mt-2">
+                    <SearchPanel
+                      notebookId={notebookId}
+                      disabled={readyCount === 0}
+                    />
+                    <p className="text-muted-foreground mt-2 text-xs">
+                      Raw retrieval, without an answer written over it. Useful
+                      for checking what was actually indexed.
+                    </p>
+                  </div>
+                </details>
               </>
             )}
           </div>
