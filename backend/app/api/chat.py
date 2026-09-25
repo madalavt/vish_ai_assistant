@@ -102,7 +102,8 @@ async def _begin_turn(
             conversation.title = title_from(content)
         existing.append(user_message)
 
-    if not existing:
+    # Regenerate re-runs the last user turn, so the old reply must be truncated first.
+    if not existing or existing[-1].role != "user":
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Nothing to regenerate")
 
     assistant = Message(

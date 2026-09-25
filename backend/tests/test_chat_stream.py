@@ -268,3 +268,30 @@ async def test_thinking_is_only_requested_from_models_that_support_it(client, cr
     await send(client, created, "[test] think", model=OTHER_MODEL, think=True)
 
     assert provider.think_flags == [True, False]
+
+
+async def test_regenerate_replaces_the_last_reply(client, created, provider):
+    start, _ = await send(client, created, "[test] regenerate me")
+    conversation_id = start["conversation_id"]
+
+    await client.post(f"/api/conversations/{conversation_id}/truncate", json={"position": 1})
+    again, events = await send(client, created, None, conversation_id)
+
+    assert again["user_message_id"] is None and events[-1][0] == "done"
+    assert [m["role"] for m in await saved_messages(client, conversation_id)] == [
+        "user",
+        "assistant",
+    ]
+
+
+async def test_regenerate_without_truncating_first_is_refused(client, created, provider):
+    """It used to append a second, near-empty reply straight after the first."""
+    start, _ = await send(client, created, "[test] hi")
+    conversation_id = start["conversation_id"]
+
+    response = await client.post(
+        "/api/chat/stream", json={"conversation_id": conversation_id, "content": None}
+    )
+
+    assert response.status_code == 422
+    assert len(await saved_messages(client, conversation_id)) == 2
